@@ -12,7 +12,8 @@ class EnsureCampaignIsDraft
     {
         $campaign = Campaign::findOrFail($request->route('campaign'));
 
-        if ($campaign->status === 'draft') {
+        // Logic was inverted! Should reject if NOT draft
+        if ($campaign->status !== 'draft') {
             return response()->json(['error' => 'Campaign must be in draft status.'], 422);
         }
 

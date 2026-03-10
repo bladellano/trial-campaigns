@@ -12,11 +12,25 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $schedule->call(function () {
-            $campaigns = Campaign::where('scheduled_at', '<=', now())->get();
+            // Process campaigns in chunks to avoid memory issues
+            Campaign::where('status', 'draft')
+                ->where('scheduled_at', '<=', now())
+                ->whereNotNull('scheduled_at')
+                ->chunkById(50, function ($campaigns) {
+                    foreach ($campaigns as $campaign) {
+                        try {
+                            app(CampaignService::class)->dispatch($campaign);
 
-            foreach ($campaigns as $campaign) {
-                app(CampaignService::class)->dispatch($campaign);
-            }
+                            // Clear the scheduled_at to prevent reprocessing
+                            $campaign->update(['scheduled_at' => null]);
+                        } catch (\Exception $e) {
+                            \Log::error('Failed to dispatch scheduled campaign', [
+                                'campaign_id' => $campaign->id,
+                                'error' => $e->getMessage()
+                            ]);
+                        }
+                    }
+                });
         })->everyMinute();
     }
 
