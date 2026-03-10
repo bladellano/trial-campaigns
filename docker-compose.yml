@@ -41,6 +41,12 @@ services:
       - DB_USERNAME=root
       - DB_PASSWORD=root
       - REDIS_HOST=redis
+    healthcheck:
+      test: ["CMD", "php-fpm-healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Nginx Web Server
   nginx:
@@ -54,9 +60,15 @@ services:
       - trial-campaigns-network
     depends_on:
       - app
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.laravel-app.rule=Host(`trial-campaigns.docker.local`)"
+      - "traefik.http.routers.laravel-app.entrypoints=web"
       - "traefik.http.services.laravel-app.loadbalancer.server.port=80"
 
   # MySQL Database
@@ -92,6 +104,11 @@ services:
       - redis-data:/data
     networks:
       - trial-campaigns-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     command: redis-server --appendonly yes
 
 # Volumes persistentes

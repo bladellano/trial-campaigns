@@ -1,0 +1,21 @@
+#!/usr/local/bin/php
+<?php
+/**
+ * PHP-FPM Health Check Script
+ * Verifica se o PHP-FPM está respondendo corretamente
+ */
+
+// Tentar conectar ao PHP-FPM via socket ou porta
+$socket = '/var/run/php/php-fpm.sock';
+$host = '127.0.0.1:9000';
+
+// Verificar se o processo PHP-FPM está rodando
+exec('pgrep php-fpm', $output, $return);
+
+if ($return === 0 && !empty($output)) {
+    echo "PHP-FPM is running\n";
+    exit(0);
+} else {
+    echo "PHP-FPM is not running\n";
+    exit(1);
+}

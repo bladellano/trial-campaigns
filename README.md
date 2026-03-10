@@ -28,9 +28,37 @@ make logs     # View logs
 make shell    # Access container bash
 make test     # Run tests
 make queue    # Start queue worker
+make backup   # Backup (MySQL, Redis, volumes)
+make health   # Health check all services
 ```
 
-📖 **Full documentation**: [DOCKER.md](DOCKER.md)
+📖 **Documentation**: [DOCKER.md](DOCKER.md) | [PRODUCTION.md](PRODUCTION.md)
+
+## Production Ready ✅
+
+This project includes production-ready features (P0):
+
+- 🔒 **SSL/HTTPS** - Let's Encrypt via Traefik (auto-renewal)
+- 🔐 **Security** - Environment variables for passwords (no hardcoded)
+- 💾 **Backups** - Automated backups (local + S3 support)
+- 👷 **Queue Workers** - Supervisor managing 2 workers + scheduler
+- 🏥 **Monitoring** - Health checks on all 5 services
+
+**Deploy to production:**
+
+```bash
+# 1. Configure environment
+cp .env.production.example .env.production
+# Edit with your values (domain, passwords, etc)
+
+# 2. Start production environment
+make prod-up
+
+# 3. Verify health
+make health
+```
+
+See [PRODUCTION.md](PRODUCTION.md) for complete production guide.
 
 ## Local Setup (Without Docker)
 

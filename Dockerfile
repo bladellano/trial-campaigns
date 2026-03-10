@@ -18,6 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libicu-dev \
     gnupg \
     ca-certificates \
+    supervisor \
+    procps \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -65,6 +67,14 @@ WORKDIR /var/www
 # Copiar código da aplicação
 COPY --chown=laravel:laravel . /var/www
 
+# Copiar health check script
+COPY docker/php-fpm-healthcheck /usr/local/bin/php-fpm-healthcheck
+RUN chmod +x /usr/local/bin/php-fpm-healthcheck
+
+# Copiar entrypoint script
+COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Garantir permissões corretas em storage e bootstrap/cache
 RUN mkdir -p /var/www/storage /var/www/bootstrap/cache \
     && chown -R laravel:laravel /var/www/storage /var/www/bootstrap/cache \
@@ -80,8 +90,16 @@ EXPOSE 9000
 # Expor porta do Vite para HMR
 EXPOSE 5173
 
-# Mudar para o usuário laravel
+# Configurar Supervisor (precisa ser root para iniciar, depois muda para laravel)
+# Os processos do Supervisor rodarão como usuário laravel (definido em queue-worker.conf)
+USER root
+
+# Criar diretórios do Supervisor
+RUN mkdir -p /var/log/supervisor \
+    && mkdir -p /etc/supervisor/conf.d
+
+# Mudar para o usuário laravel (será usado pelo PHP-FPM)
 USER laravel
 
-# Comando padrão
+# Comando padrão (em produção, use o entrypoint com Supervisor)
 CMD ["php-fpm"]

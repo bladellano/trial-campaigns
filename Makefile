@@ -57,3 +57,46 @@ setup: up ## Setup completo (primeira vez)
 	docker-compose exec app php artisan migrate --seed
 	@echo "$(GREEN)✓ Setup concluído!$(NC)"
 	@echo "$(YELLOW)→ http://trial-campaigns.docker.local$(NC)"
+
+# Produção
+prod-up: ## Sobe ambiente de produção
+	docker-compose -f docker-compose.prod.yml up -d
+	@echo "$(GREEN)Ambiente de produção iniciado!$(NC)"
+
+prod-down: ## Para ambiente de produção
+	docker-compose -f docker-compose.prod.yml down
+
+prod-logs: ## Logs de produção
+	docker-compose -f docker-compose.prod.yml logs -f
+
+# Backup e Restore
+backup: ## Faz backup completo (MySQL, Redis, volumes)
+	@echo "$(YELLOW)Iniciando backup...$(NC)"
+	./scripts/backup.sh
+	@echo "$(GREEN)Backup concluído!$(NC)"
+
+backup-s3: ## Faz backup e envia para S3
+	@echo "$(YELLOW)Iniciando backup com upload S3...$(NC)"
+	./scripts/backup.sh s3
+	@echo "$(GREEN)Backup e upload concluídos!$(NC)"
+
+restore: ## Restaura backup (uso: make restore DATE=20260310_143000)
+ifndef DATE
+	@echo "$(YELLOW)Uso: make restore DATE=20260310_143000$(NC)"
+	@echo "Backups disponíveis:"
+	@ls -1 backups/*.sql.gz 2>/dev/null | sed 's/backups\/mysql_backup_/  /' | sed 's/\.sql\.gz//' || echo "Nenhum backup encontrado"
+else
+	@echo "$(YELLOW)Restaurando backup $(DATE)...$(NC)"
+	./scripts/restore.sh $(DATE)
+	@echo "$(GREEN)Restore concluído!$(NC)"
+endif
+
+# Monitoramento
+health: ## Verifica status de todos os serviços
+	@./scripts/health-check.sh
+
+status: ## Mostra status dos containers
+	@docker-compose ps
+
+stats: ## Mostra uso de recursos
+	@docker stats --no-stream trial-campaigns-app trial-campaigns-nginx trial-campaigns-db trial-campaigns-redis trial-campaigns-traefik
