@@ -14,6 +14,20 @@ class SendCampaignEmail implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /**
+     * The number of times the job may be attempted.
+     */
+    public $tries = 3;
+
+    /**
+     * The number of seconds the job can run before timing out.
+     */
+    public $timeout = 60;
+
+    /**
+     * The number of seconds to wait before retrying the job.
+     */
+    public $backoff = [10, 30, 60];
 
     public function __construct(
         private readonly int $campaignSendId
@@ -21,9 +35,16 @@ class SendCampaignEmail implements ShouldQueue
 
     public function handle(): void
     {
-        $send = CampaignSend::find($this->campaignSendId);
+        // Eager load relationships to avoid N+1 queries
+        $send = CampaignSend::with(['contact', 'campaign'])->find($this->campaignSendId);
 
         if (!$send) {
+            return;
+        }
+
+        // Idempotency check - don't resend if already sent
+        if ($send->status === 'sent') {
+            Log::info('Campaign send already sent, skipping', ['send_id' => $send->id]);
             return;
         }
 
@@ -39,11 +60,15 @@ class SendCampaignEmail implements ShouldQueue
             ]);
 
             Log::error('Campaign send failed', ['send_id' => $send->id, 'error' => $e->getMessage()]);
+
+            // Re-throw to trigger retry mechanism
+            throw $e;
         }
     }
 
     private function sendEmail(string $to, string $subject, string $body): void
     {
+        // Mock email sending
         Log::info("Sending email to {$to}: {$subject}");
     }
 }
