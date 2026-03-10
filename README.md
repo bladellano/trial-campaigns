@@ -2,14 +2,37 @@
 
 ## Overview
 
-This is a partially built Laravel application for managing email campaigns. It was developed quickly and is considered working but not production-ready.
+Laravel application for managing email campaigns with queue-based processing.
 
-Your task has two parts:
+**Task**: Review/fix existing code + Build REST API layer
 
-1. **Review and fix** the existing codebase
-2. **Build the missing API layer** from scratch
+## Quick Start (Docker)
 
-## Setup
+```bash
+# 1. Add domain to hosts
+echo "127.0.0.1 trial-campaigns.docker.local" | sudo tee -a /etc/hosts
+
+# 2. Setup environment
+make setup
+
+# 3. Access
+# → http://trial-campaigns.docker.local
+# → http://localhost:8080 (Traefik)
+```
+
+## Commands
+
+```bash
+make help     # List all commands
+make logs     # View logs
+make shell    # Access container bash
+make test     # Run tests
+make queue    # Start queue worker
+```
+
+📖 **Full documentation**: [DOCKER.md](DOCKER.md)
+
+## Local Setup (Without Docker)
 
 ```bash
 cp .env.example .env
@@ -19,64 +42,51 @@ php artisan migrate --seed
 php artisan queue:work
 ```
 
-## What exists (if not, create to work)
+## What Exists
 
 - Models: `Contact`, `ContactList`, `Campaign`, `CampaignSend`
-- A `CampaignService` for dispatching campaigns
-- A `SendCampaignEmail` Job
-- A scheduled command that dispatches due campaigns
+- Service: `CampaignService`
+- Job: `SendCampaignEmail`
 - Middleware: `EnsureCampaignIsDraft`
+- Scheduled command for campaigns
 
 ## Part 1 — Code Review
 
-Review everything that exists: migrations, models, service, job, middleware, scheduler.
+Review migrations, models, services, jobs, middleware, and scheduler.
 
-For each problem you find, document it in `CHANGES.md`:
-
+Document in `CHANGES.md`:
 - What the issue is
 - Why it matters in production
 - How you fixed it
 
-No hints on how many issues exist or where they are.
-
 ## Part 2 — Build the API
 
-Implement a RESTful JSON API with the following endpoints:
-
 ### Contacts
-
 - `GET /api/contacts` — paginated list
-- `POST /api/contacts` — create (name, email, status)
-- `POST /api/contacts/{id}/unsubscribe` — mark as unsubscribed
+- `POST /api/contacts` — create
+- `POST /api/contacts/{id}/unsubscribe`
 
 ### Contact Lists
-
-- `GET /api/contact-lists` — list all
-- `POST /api/contact-lists` — create
-- `POST /api/contact-lists/{id}/contacts` — add a contact to a list
+- `GET /api/contact-lists`
+- `POST /api/contact-lists`
+- `POST /api/contact-lists/{id}/contacts`
 
 ### Campaigns
-
-- `GET /api/campaigns` — list with send stats
-- `POST /api/campaigns` — create (subject, body, contact_list_id, scheduled_at)
-- `GET /api/campaigns/{id}` — show with send stats
-- `POST /api/campaigns/{id}/dispatch` — dispatch immediately
+- `GET /api/campaigns` — list with stats
+- `POST /api/campaigns` — create/schedule
+- `GET /api/campaigns/{id}` — show with stats
+- `POST /api/campaigns/{id}/dispatch`
 
 ### Requirements
-
-- Use FormRequest classes for validation
-- No authentication required
-- Pagination on list endpoints
-- Stats (pending/sent/failed counts) must use DB aggregation, not collection counting
+- FormRequest validation
+- Pagination on lists
+- Stats via DB aggregation (not collection counting)
+- At least one Feature test
 
 ## Deliverables
 
 - Fixed codebase with `CHANGES.md`
-- Working API
-- At least one Feature test
+- Working REST API
+- Feature test(s)
 
-Time estimate: 2–3 hours. Use any tools you normally use.
-
-## Questions?
-
-Open an issue in this repository.
+Time estimate: 2–3 hours

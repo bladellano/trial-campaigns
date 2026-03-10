@@ -24,3 +24,16 @@ Homestead.yaml
 Thumbs.db
 /.claude
 /database/database.sqlite
+
+# Cache de gerenciadores de pacotes
+.composer/
+.npm/
+.yarn/
+.pnpm-store/
+.cache/
+
+# Docker
+docker-compose.override.yml
+*.sql
+.docker/
+mysql-backup.tar.gz
