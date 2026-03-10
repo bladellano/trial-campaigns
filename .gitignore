@@ -37,3 +37,9 @@ docker-compose.override.yml
 *.sql
 .docker/
 mysql-backup.tar.gz
+
+# Backups
+/backups/
+
+# Let's Encrypt / Traefik
+/letsencrypt/
