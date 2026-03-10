@@ -1,0 +1,107 @@
+services:
+  # Traefik - Edge Router / Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: trial-campaigns-traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"       # Web traffic
+      - "8080:8080"   # Traefik Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - trial-campaigns-network
+
+  # PHP-FPM Application Container
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trial-campaigns-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    ports:
+      - "5173:5173"  # Vite HMR
+    networks:
+      - trial-campaigns-network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - DB_HOST=db
+      - DB_DATABASE=laravel_db
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+      - REDIS_HOST=redis
+
+  # Nginx Web Server
+  nginx:
+    image: nginx:alpine
+    container_name: trial-campaigns-nginx
+    restart: unless-stopped
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - trial-campaigns-network
+    depends_on:
+      - app
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.laravel-app.rule=Host(`trial-campaigns.docker.local`)"
+      - "traefik.http.services.laravel-app.loadbalancer.server.port=80"
+
+  # MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: trial-campaigns-db
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: laravel_db
+      MYSQL_PASSWORD: root
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - trial-campaigns-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis Cache/Queue
+  redis:
+    image: redis:alpine
+    container_name: trial-campaigns-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - trial-campaigns-network
+    command: redis-server --appendonly yes
+
+# Volumes persistentes
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+
+# Network
+networks:
+  trial-campaigns-network:
+    driver: bridge
